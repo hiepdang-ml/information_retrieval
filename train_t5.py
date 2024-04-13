@@ -1,10 +1,10 @@
 import os
 import argparse
+import datetime as dt
 from typing import Dict, Any
 
 import yaml
 
-from torch.utils.data import DataLoader
 from transformers import (
     T5Tokenizer, 
     DataCollatorForSeq2Seq, 
@@ -19,10 +19,17 @@ from src.metrics import Rouge
 
 def main(config: Dict[str, Any]) -> None:
 
-    tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained('google-t5/' + config['model']['tokenizer'])
+    tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained(
+        'google-t5/' + config['model']['tokenizer'], 
+        model_max_length=5120,
+    )
 
     if config['dataset']['name'] == 'Wikipedia':
-        wiki = WikipediaDataset(csv_path=config['dataset']['csv_path'], tokenizer=tokenizer)
+        wiki = WikipediaDataset(
+            csv_path=config['dataset']['csv_path'], 
+            tokenizer=tokenizer, 
+            n_articles=config['dataset']['n_articles'],
+        )
         dataset = wiki(split_ratios=tuple(config['dataset']['split']))
     else:
         raise ValueError(f"Dataset {config['dataset']['name']} not available")
@@ -44,7 +51,7 @@ def main(config: Dict[str, Any]) -> None:
     data_collator: DataCollatorForSeq2Seq = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
     training_args: Seq2SeqTrainingArguments = Seq2SeqTrainingArguments(
-        output_dir=config['training']['output_dir'],
+        output_dir=config['training']['output_dir'] + f'/{dt.datetime.now().strftime("%Y%m%d%H%M%S")}',
         evaluation_strategy=config['training']['evaluation_strategy'],
         save_strategy=config['training']['evaluation_strategy'],
         learning_rate=config['training']['learning_rate'],
@@ -54,7 +61,7 @@ def main(config: Dict[str, Any]) -> None:
         fp16=config['training']['fp16'],
         predict_with_generate=True,
         load_best_model_at_end=True,
-        metric_for_best_model='rouge',
+        metric_for_best_model='rougeLsum',
         greater_is_better=True,
     )
 
@@ -79,6 +86,7 @@ if __name__ == '__main__':
     parser.add_argument('--config', type=str, default='t5.yaml', help='Configuration file name.')
     parser.add_argument('--dataset', type=str, choices=['Wikipedia',], help='Dataset\'s name')
     parser.add_argument('--csv_path', type=str, help='Path to the dataset file')
+    parser.add_argument('--n_articles', type=int, help='How many articles are used for both training and evaluation')
     parser.add_argument('--split', nargs=3, type=float, help='List of split ratios')
     parser.add_argument('--model', type=str, help='Model\'s name')
     parser.add_argument('--tokenizer', type=str, help='Tokenizer\'s name')
@@ -111,7 +119,7 @@ if __name__ == '__main__':
             continue
         if arg in ['dataset', 'model']:
             config[arg]['name'] = value
-        elif arg in ['csv_path', 'split']:
+        elif arg in ['csv_path', 'split', 'n_articles']:
             config['dataset'][arg] = value
         elif arg in [
             'tokenizer', 'd_model', 'd_ff', 'num_layers', 
