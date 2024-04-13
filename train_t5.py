@@ -77,7 +77,6 @@ if __name__ == '__main__':
     parser: argparse.ArgumentParser = argparse.ArgumentParser(description='Train a T5 model for text summarization')
 
     parser.add_argument('--config', type=str, default='t5.yaml', help='Configuration file name.')
-    parser.add_argument('--device', type=str, choices=['cpu', 'gpu'], help='Training device')
     parser.add_argument('--dataset', type=str, choices=['Wikipedia',], help='Dataset\'s name')
     parser.add_argument('--csv_path', type=str, help='Path to the dataset file')
     parser.add_argument('--split', nargs=3, type=float, help='List of split ratios')

@@ -29,6 +29,8 @@ class WikipediaDataset:
             names=['category', 'topic', 'summary', 'text', 'page_id', 'url'],
             header=0,
             dtype=str,
+            # TODO: drop nrows
+            nrows=1000,
         ).fillna(value='')
         # convert `pd.DataFrame` to `datasets.Dataset`
         dataset: Dataset = Dataset.from_pandas(df=table)
