@@ -1,0 +1,31 @@
+device: gpu
+
+dataset:
+  name: 'Wikipedia'
+  csv_path: 'datasets/WikiData.csv'
+  split: [0.8, 0.1, 0.1]
+
+model:
+  name: 'T5'
+  tokenizer: 't5-small'   # t5-base, t5-small, t5-large, t5-3b, t5-11b
+  d_model: 512
+  d_ff: 2048
+  num_layers: 6
+  num_heads: 8
+  relative_attention_num_buckets: 32
+  dropout_rate: 0.1
+  initializer_factor: 1.0
+
+training:
+  output_dir: '.checkpoint'
+  evaluation_strategy: 'epoch'    # 'no', 'steps', 'epoch'
+  learning_rate: 0.00002
+  per_device_train_batch_size: 8
+  per_device_eval_batch_size: 8
+  num_train_epochs: 20
+  fp16: False
+
+
+
+
+
