@@ -16,6 +16,7 @@ model:
   initializer_factor: 1.0
 
 training:
+  from_checkpoint: null
   output_dir: '.checkpoint'
   evaluation_strategy: 'epoch'    # 'no', 'steps', 'epoch'
   learning_rate: 0.00005

@@ -10,6 +10,7 @@ from transformers import (
     DataCollatorForSeq2Seq, 
     Seq2SeqTrainingArguments, 
     Seq2SeqTrainer, 
+    AutoModelForSeq2SeqLM,
 )
 
 from src.t5 import T5Model
@@ -19,10 +20,29 @@ from src.metrics import Rouge
 
 def main(config: Dict[str, Any]) -> None:
 
-    tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained(
-        'google-t5/' + config['model']['tokenizer'], 
-        model_max_length=5120,
-    )
+    os.makedirs(config['training']['output_dir'], exist_ok=True)
+
+    if config['training']['from_checkpoint'] is not None:
+        tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained(config['training']['from_checkpoint'])
+        model = AutoModelForSeq2SeqLM.from_pretrained(config['training']['from_checkpoint'])
+    else:
+        tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained(
+            'google-t5/' + config['model']['tokenizer'], 
+            model_max_length=5120,
+        )
+        if config['model']['name'].lower() == 't5':
+            model: T5Model = T5Model(
+                d_model=config['model']['d_model'],
+                d_ff=config['model']['d_ff'],
+                num_layers=config['model']['num_layers'],
+                num_heads=config['model']['num_heads'],
+                relative_attention_num_buckets=config['model']['relative_attention_num_buckets'],
+                dropout_rate=config['model']['dropout_rate'],
+                initializer_factor=config['model']['initializer_factor'],
+                tokenizer=tokenizer,
+            )
+        else:
+            raise ValueError(f"Model {config['model']['name']} not supported")
 
     if config['dataset']['name'] == 'Wikipedia':
         wiki = WikipediaDataset(
@@ -33,20 +53,6 @@ def main(config: Dict[str, Any]) -> None:
         dataset = wiki(split_ratios=tuple(config['dataset']['split']))
     else:
         raise ValueError(f"Dataset {config['dataset']['name']} not available")
-
-    if config['model']['name'].lower() == 't5':
-        model: T5Model = T5Model(
-            d_model=config['model']['d_model'],
-            d_ff=config['model']['d_ff'],
-            num_layers=config['model']['num_layers'],
-            num_heads=config['model']['num_heads'],
-            relative_attention_num_buckets=config['model']['relative_attention_num_buckets'],
-            dropout_rate=config['model']['dropout_rate'],
-            initializer_factor=config['model']['initializer_factor'],
-            tokenizer=tokenizer,
-        )
-    else:
-        raise ValueError(f"Model {config['model']['name']} not supported")
     
     data_collator: DataCollatorForSeq2Seq = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
@@ -83,6 +89,7 @@ if __name__ == '__main__':
 
     parser: argparse.ArgumentParser = argparse.ArgumentParser(description='Train a T5 model for text summarization')
 
+    parser.add_argument('--from_checkpoint', type=str, help='Continue training from a checkpoint.')
     parser.add_argument('--config', type=str, default='t5.yaml', help='Configuration file name.')
     parser.add_argument('--dataset', type=str, choices=['Wikipedia',], help='Dataset\'s name')
     parser.add_argument('--csv_path', type=str, help='Path to the dataset file')
@@ -128,6 +135,7 @@ if __name__ == '__main__':
         ]:
             config['model'][arg] = value
         elif arg in [
+            'from_checkpoint',
             'output_dir', 'evaluation_strategy', 'learning_rate',
             'per_device_train_batch_size', 'per_device_eval_batch_size',
             'num_train_epochs', 'fp16',
