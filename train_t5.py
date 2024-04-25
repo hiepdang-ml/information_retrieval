@@ -4,6 +4,7 @@ import datetime as dt
 from typing import Dict, Any
 
 import yaml
+import torch
 
 from transformers import (
     T5Tokenizer, 
@@ -13,7 +14,7 @@ from transformers import (
     AutoModelForSeq2SeqLM,
 )
 
-from src.t5 import T5Model
+from src.t5 import T5Base
 from src.dataset import WikipediaDataset
 from src.metrics import Rouge
 
@@ -26,33 +27,16 @@ def main(config: Dict[str, Any]) -> None:
         tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained(config['training']['from_checkpoint'])
         model = AutoModelForSeq2SeqLM.from_pretrained(config['training']['from_checkpoint'])
     else:
-        tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained(
-            'google-t5/' + config['model']['tokenizer'], 
-            model_max_length=5120,
-        )
-        if config['model']['name'].lower() == 't5':
-            model: T5Model = T5Model(
-                d_model=config['model']['d_model'],
-                d_ff=config['model']['d_ff'],
-                num_layers=config['model']['num_layers'],
-                num_heads=config['model']['num_heads'],
-                relative_attention_num_buckets=config['model']['relative_attention_num_buckets'],
-                dropout_rate=config['model']['dropout_rate'],
-                initializer_factor=config['model']['initializer_factor'],
-                tokenizer=tokenizer,
-            )
-        else:
-            raise ValueError(f"Model {config['model']['name']} not supported")
+        tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained('google-t5/t5-base')
+        model: T5Base = T5Base(tokenizer=tokenizer)
+        model.load_state_dict(torch.load('t5_state_dict.pth'))
 
-    if config['dataset']['name'] == 'Wikipedia':
-        wiki = WikipediaDataset(
-            csv_path=config['dataset']['csv_path'], 
-            tokenizer=tokenizer, 
-            n_articles=config['dataset']['n_articles'],
-        )
-        dataset = wiki(split_ratios=tuple(config['dataset']['split']))
-    else:
-        raise ValueError(f"Dataset {config['dataset']['name']} not available")
+    wiki = WikipediaDataset(csv_path=config['dataset']['csv_path'])
+    dataset = wiki.for_training(
+        tokenizer=tokenizer, 
+        split_ratios=tuple(config['dataset']['split']), 
+        n_articles=config['dataset']['n_articles']
+    )
     
     data_collator: DataCollatorForSeq2Seq = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
@@ -91,19 +75,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--from_checkpoint', type=str, help='Continue training from a checkpoint.')
     parser.add_argument('--config', type=str, default='t5.yaml', help='Configuration file name.')
-    parser.add_argument('--dataset', type=str, choices=['Wikipedia',], help='Dataset\'s name')
     parser.add_argument('--csv_path', type=str, help='Path to the dataset file')
     parser.add_argument('--n_articles', type=int, help='How many articles are used for both training and evaluation')
     parser.add_argument('--split', nargs=3, type=float, help='List of split ratios')
-    parser.add_argument('--model', type=str, help='Model\'s name')
-    parser.add_argument('--tokenizer', type=str, help='Tokenizer\'s name')
-    parser.add_argument('--d_model', type=int, help='Embedding dimension in nn.Embedding')
-    parser.add_argument('--d_ff', type=int, help='Output dimenshion in nn.Linear')
-    parser.add_argument('--num_layers', type=int, help='Number of layers in encoder and decoder, each layer has self-attention and feed-forward')
-    parser.add_argument('--num_heads', type=int, help='Number of attention heads')
-    parser.add_argument('--relative_attention_num_buckets', type=int, help='Number of buckets used for relative positions in the self-attention mechanism')
-    parser.add_argument('--dropout_rate', type=float, help='Dropout rate of the transformer')
-    parser.add_argument('--initializer_factor', type=float, help='Scaling factor of the standard deviation in the normal initializer')
     parser.add_argument('--output_dir', type=str, help='Directory to save the model')
     parser.add_argument('--evaluation_strategy', type=str, choices=['no', 'steps', 'epoch'], help='Evaluate the model after each batch (`steps`) or after each epoch (`epoch`) or not evaluate the model at all (`no`)')
     parser.add_argument('--learning_rate', type=float, help='Learning rate for training')
@@ -124,16 +98,8 @@ if __name__ == '__main__':
         value: str | int | float | None = getattr(args, arg)
         if value is None:
             continue
-        if arg in ['dataset', 'model']:
-            config[arg]['name'] = value
         elif arg in ['csv_path', 'split', 'n_articles']:
             config['dataset'][arg] = value
-        elif arg in [
-            'tokenizer', 'd_model', 'd_ff', 'num_layers', 
-            'num_heads', 'relative_attention_num_buckets', 
-            'dropout_rate', 'initializer_factor',
-        ]:
-            config['model'][arg] = value
         elif arg in [
             'from_checkpoint',
             'output_dir', 'evaluation_strategy', 'learning_rate',
