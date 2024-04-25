@@ -46,7 +46,6 @@ class WikipediaDataset:
         else:
             datadict: DatasetDict = DatasetDict({'all': dataset})
 
-        # TODO: only get first 512 tokens
         return datadict.map(
             function=self.__batch_preprocess, 
             batched=True, 
@@ -55,6 +54,7 @@ class WikipediaDataset:
         )
 
     def __batch_preprocess(self, batch: Dataset) -> Dataset:
+        # TODO: exclude 'summary' from 'text'
         batch['text'] = ['summarize: ' + doc for doc in batch['text']]
         batch['input_ids'], batch['attention_mask'] = self.__tokenize(batch['text'], max_length=2560)
         batch['labels'], _ = self.__tokenize(batch['summary'], max_length=256)

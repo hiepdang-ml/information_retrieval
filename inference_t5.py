@@ -6,6 +6,7 @@ def main(checkpoint: str, input_text: str, input_file: str) -> str:
 
     model = pipeline(task="summarization", model=checkpoint)
 
+    # TODO: only get first 512 tokens from input_text/file.read()
     if input_text is not None:
         output_text = model('summarize: ' + input_text, max_length=300, min_length=50, do_sample=False)
     elif input_file is not None:
