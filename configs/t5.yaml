@@ -1,19 +1,7 @@
 dataset:
-  name: 'Wikipedia'
   csv_path: 'datasets/WikiData.csv'
   n_articles: null  # parsed as None
   split: [0.9, 0.1]
-
-model:
-  name: 'T5'
-  tokenizer: 't5-base'   # t5-base, t5-small, t5-large, t5-3b, t5-11b
-  d_model: 768
-  d_ff: 3072
-  num_layers: 12
-  num_heads: 12
-  relative_attention_num_buckets: 32
-  dropout_rate: 0.1
-  initializer_factor: 1.0
 
 training:
   from_checkpoint: null
