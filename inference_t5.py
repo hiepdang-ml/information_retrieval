@@ -4,7 +4,7 @@ from transformers import pipeline
 
 def main(checkpoint: str, input_text: str, input_file: str) -> str:
 
-    model = pipeline("summarization", model=checkpoint)
+    model = pipeline(task="summarization", model=checkpoint)
 
     if input_text is not None:
         output_text = model('summarize: ' + input_text, max_length=1000, min_length=100, do_sample=False)
