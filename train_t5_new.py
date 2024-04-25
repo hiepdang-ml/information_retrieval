@@ -28,7 +28,8 @@ def main(config: Dict[str, Any]) -> None:
         model = AutoModelForSeq2SeqLM.from_pretrained(config['training']['from_checkpoint'])
     else:
         tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained('google-t5/' + config['model']['tokenizer'])
-        model: T5ForConditionalGeneration = T5ForConditionalGeneration.from_pretrained('google-t5/' + config['model']['tokenizer'])
+        # TODO: add config
+        model: T5ForConditionalGeneration = T5ForConditionalGeneration.from_pretrained('google-t5/t5-base')
 
     if config['dataset']['name'] == 'Wikipedia':
         wiki = WikipediaDataset(

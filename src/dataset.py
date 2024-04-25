@@ -46,6 +46,7 @@ class WikipediaDataset:
         else:
             datadict: DatasetDict = DatasetDict({'all': dataset})
 
+        # TODO: only get first 512 tokens
         return datadict.map(
             function=self.__batch_preprocess, 
             batched=True, 
