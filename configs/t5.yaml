@@ -13,4 +13,7 @@ training:
   num_train_epochs: 20
   fp16: True
 
-
+agent:
+  max_summary_length: 300
+  min_summary_length: 50
+  max_article_length: 512
