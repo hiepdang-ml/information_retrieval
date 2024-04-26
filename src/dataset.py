@@ -17,7 +17,6 @@ class WikipediaDataset:
     def get_raw_dataset(self, n_articles: Optional[int] = None) -> Dataset:
         if n_articles is None:
             limit_command: str = ''
-            limit_command: str = 'LIMIT 1000'
         else:
             limit_command: str = f'LIMIT {int(n_articles)}'
         query = (
