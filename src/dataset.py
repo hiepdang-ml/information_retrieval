@@ -17,6 +17,7 @@ class WikipediaDataset:
     def get_raw_dataset(self, n_articles: Optional[int] = None) -> Dataset:
         if n_articles is None:
             limit_command: str = ''
+            limit_command: str = 'LIMIT 1000'
         else:
             limit_command: str = f'LIMIT {int(n_articles)}'
         query = (
@@ -61,7 +62,7 @@ class WikipediaDataset:
         datadict: DatasetDict = DatasetDict({'train': train_dataset, 'val': val_dataset})
 
         return datadict.map(
-            function=lambda batch: self.__batch_preprocess_training(tokenizer, batch), 
+            function=lambda batch: WikipediaDataset.__batch_preprocess_training(tokenizer, batch), 
             batched=True, 
             batch_size=1024,
             num_proc=4,
@@ -119,8 +120,8 @@ class WikipediaDataset:
 if __name__ == '__main__':
     tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained('google-t5/t5-base', model_max_length=512)
     wiki = WikipediaDataset(csv_path='datasets/WikiData.csv')
-    dataset = wiki.get_raw_dataset()
-    # training_dataset: DatasetDict = wiki.for_training(tokenizer, n_articles=1000)
-    # inference_dataset: DatasetDict = wiki.for_inference()
+    # dataset = wiki.get_raw_dataset()
+    training_dataset: DatasetDict = wiki.for_training(tokenizer, n_articles=1000)
+    inference_dataset: DatasetDict = wiki.for_inference()
 
 
