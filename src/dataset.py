@@ -67,7 +67,10 @@ class WikipediaDataset:
 
     @staticmethod
     def __batch_preprocess(tokenizer: T5Tokenizer, batch: Dataset) -> Dataset:
-        batch['text'] = ['summarize: ' + text.replace(summary, '') for text, summary in zip(batch['text'], batch['summary'])]
+        batch['text'] = [
+            'summarize: ' + text.replace(summary, '') if len(text) >= 3000 else text
+            for text, summary in zip(batch['text'], batch['summary'])
+        ]
         batch['input_ids'], batch['attention_mask'] = WikipediaDataset.__tokenize(tokenizer, batch['text'], max_length=1024)
         batch['labels'], _ = WikipediaDataset.__tokenize(tokenizer, batch['summary'], max_length=256)
         return batch

@@ -5,12 +5,12 @@ dataset:
 
 training:
   from_checkpoint: null
-  output_dir: '.checkpoint'
+  output_dir: 'checkpoints'
   evaluation_strategy: 'epoch'    # 'no', 'steps', 'epoch'
-  learning_rate: 0.00005
-  per_device_train_batch_size: 1
-  per_device_eval_batch_size: 1
-  num_train_epochs: 20
+  learning_rate: 0.00002
+  per_device_train_batch_size: 16
+  per_device_eval_batch_size: 16
+  num_train_epochs: 4
   fp16: True
 
 agent:

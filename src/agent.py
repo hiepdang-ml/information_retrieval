@@ -1,6 +1,5 @@
 import os
 from typing import List, Dict, Any
-from functools import cached_property
 
 import yaml
 import numpy as np
@@ -8,12 +7,8 @@ from numpy.typing import NDArray
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-import torch
-import torch.nn as nn
-
-
 from datasets import DatasetDict
-from transformers import T5Tokenizer, AutoModelForSeq2SeqLM, T5Model, pipeline
+from transformers import pipeline
 
 from .dataset import WikipediaDataset
 
