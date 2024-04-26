@@ -1,5 +1,5 @@
 import os
-from typing import List, Dict, Any
+from typing import Tuple, List, Dict, Any
 
 import yaml
 import numpy as np
@@ -7,8 +7,9 @@ from numpy.typing import NDArray
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+import torch
 from datasets import DatasetDict
-from transformers import pipeline
+from transformers import T5Tokenizer, T5ForConditionalGeneration, pipeline
 
 from .dataset import WikipediaDataset
 
@@ -22,10 +23,11 @@ class Agent:
         # Data
         self.csv_path: str = csv_path
         self.wiki: WikipediaDataset = WikipediaDataset(csv_path=csv_path)
-        self.dataset: DatasetDict = self.wiki.for_inference(max_article_length=self.config['agent']['max_article_length'])
-        # Model
+        self.dataset: DatasetDict = self.wiki.for_inference()
+        # Tokenizer & Model
         self.checkpoint: str = checkpoint
-        self.model = pipeline(task='summarization', model=checkpoint)
+        self.tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained(checkpoint)
+        self.model: T5ForConditionalGeneration = T5ForConditionalGeneration.from_pretrained(checkpoint)
         # Mapper
         self.vectorizer: TfidfVectorizer = TfidfVectorizer()
         self.tfidf_matrix: NDArray = self.vectorizer.fit_transform(raw_documents=self.dataset['all']['topic']).toarray() # shape: (N, V)
@@ -34,11 +36,12 @@ class Agent:
         query_vector: NDArray = self.vectorizer.transform([query]).toarray()  # shape: (1, V)
         return cosine_similarity(X=query_vector, Y=self.tfidf_matrix, dense_output=True) # shape (1, N)
     
-    def rank_articles(self, query: str, n_articles: int = 1) -> List[str]:
+    def rank_articles(self, query: str, n_articles: int = 1) -> Tuple[List[str], List[str]]:
         similarity_scores: NDArray = self.similarity(query=query).squeeze(axis=0)
         top_indices: NDArray = similarity_scores.argsort()[::-1]
         top_articles: NDArray = np.array(self.dataset['all']['text'])[top_indices[:n_articles]]
-        return list(top_articles)
+        top_urls: NDArray = np.array(self.dataset['all']['url'])[top_indices[:n_articles]]
+        return list(top_urls), list(top_articles)
     
     def run(self):
 
@@ -51,13 +54,20 @@ class Agent:
                 print('Please clarify your question')
                 continue
             
-            articles: List[str] = self.rank_articles(query, n_articles=1)
-            response: str = self.model(
+            urls, articles = self.rank_articles(query, n_articles=1)
+            inputs: torch.Tensor = self.tokenizer(
                 '\n'.join(articles), 
-                max_length=self.config['agent']['max_summary_length'], 
-                min_length=self.config['agent']['max_summary_length'], 
-                do_sample=False,
-            )[0]['summary_text']
+                return_tensors="pt", 
+                max_length=self.tokenizer.model_max_length, 
+                truncation=True
+            ).input_ids
+            outputs: torch.Tensor = self.model.generate(
+                inputs, 
+                max_new_tokens=self.config['agent']['max_summary_length'], 
+                do_sample=False
+            )
+            response: str = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            print(f'Retrieving information from {" ".join(urls)} ...')
             print(response)
 
 

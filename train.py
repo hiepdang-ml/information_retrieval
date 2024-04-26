@@ -8,6 +8,7 @@ import torch
 
 from transformers import (
     T5Tokenizer, 
+    T5ForConditionalGeneration,
     DataCollatorForSeq2Seq, 
     Seq2SeqTrainingArguments, 
     Seq2SeqTrainer, 
@@ -25,7 +26,7 @@ def main(config: Dict[str, Any]) -> None:
 
     if config['training']['from_checkpoint'] is not None:
         tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained(config['training']['from_checkpoint'])
-        model = AutoModelForSeq2SeqLM.from_pretrained(config['training']['from_checkpoint'])
+        model: T5ForConditionalGeneration = AutoModelForSeq2SeqLM.from_pretrained(config['training']['from_checkpoint'])
     else:
         tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained('google-t5/t5-base')
         model: T5Base = T5Base(tokenizer=tokenizer)

@@ -1,4 +1,5 @@
 from typing import List, Tuple, Dict, Optional
+import re
 import pandas as pd
 
 from datasets import Dataset, DatasetDict
@@ -37,6 +38,7 @@ class WikipediaDataset:
         train_val: DatasetDict = dataset.train_test_split(
             train_size=split_ratios[0], 
             test_size=split_ratios[1], 
+            shuffle=False,
             seed=42,
         )
         train_dataset: Dataset = train_val['train']
@@ -50,19 +52,19 @@ class WikipediaDataset:
             num_proc=4,
         )
     
-    def for_inference(self, max_article_length: int = 512) -> DatasetDict:
+    def for_inference(self) -> DatasetDict:
         # get the raw dataset
         dataset: Dataset = self.get_raw_dataset(None)
         return DatasetDict({'all': dataset}).map(
-            function=lambda batch: WikipediaDataset.__batch_truncate(batch, max_article_length),
+            function=WikipediaDataset.__batch_truncate,
             batched=True,
             batch_size=1024,
             num_proc=4,
         )
 
     @staticmethod
-    def __batch_truncate(batch: Dataset, max_article_length: int) -> Dataset:
-        batch['text'] = ['summarize: ' + ' '.join(text.split()[:max_article_length]) for text in batch['text']]
+    def __batch_truncate(batch: Dataset) -> Dataset:
+        batch['text'] = [WikipediaDataset.__preprocess(doc) for doc in batch['text']]
         return batch
 
     @staticmethod
@@ -71,11 +73,13 @@ class WikipediaDataset:
             'summarize: ' + text.replace(summary, '') if len(text) >= 3000 else text
             for text, summary in zip(batch['text'], batch['summary'])
         ]
-        batch['input_ids'], batch['attention_mask'] = WikipediaDataset.__tokenize(tokenizer, batch['text'], max_length=1024)
-        batch['labels'], _ = WikipediaDataset.__tokenize(tokenizer, batch['summary'], max_length=256)
+        batch['text'] = [WikipediaDataset.__preprocess(doc) for doc in batch['text']]
+        batch['summary'] = [WikipediaDataset.__preprocess(doc) for doc in batch['summary']]
+        batch['input_ids'], batch['attention_mask'] = WikipediaDataset.__tokenize(tokenizer, batch['text'], max_length=512)
+        batch['labels'], _ = WikipediaDataset.__tokenize(tokenizer, batch['summary'], max_length=512)
         return batch
 
-    @staticmethod    
+    @staticmethod
     def __tokenize(
         tokenizer: T5Tokenizer, 
         batch: Dataset, 
@@ -86,10 +90,21 @@ class WikipediaDataset:
         attention_mask: Dict[str, List[List[str]]] = encoding['attention_mask']
         return input_ids, attention_mask
     
+    @staticmethod
+    def __preprocess(text):
+        text: str = re.sub(r'\{\\displaystyle [^\}]+\}', '', text)
+        text: str = re.sub(r'\{\\pdisplaystyle[^\}]+\}', '', text)
+        text: str = re.sub(r'\{[^}]*\}', '', text)
+        text: str = re.sub(r'\\[a-zA-Z]+\{[^}]*\}', '', text)
+        text: str = re.sub(r'\\[a-zA-Z]+', '', text)
+        text: str = re.sub(r'[\n\s]+', ' ', text)
+        return text
+
+    
 if __name__ == '__main__':
-    tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained('google-t5/t5-large', model_max_length=5120)
+    tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained('google-t5/t5-base', model_max_length=512)
     wiki = WikipediaDataset(csv_path='datasets/WikiData.csv')
-    dataset_training: DatasetDict = wiki.for_training(tokenizer, n_articles=1000)
-    dataset_inference: DatasetDict = wiki.for_inference(max_article_length=512)
+    training_dataset: DatasetDict = wiki.for_training(tokenizer, n_articles=1000)
+    inference_dataset: DatasetDict = wiki.for_inference()
 
 

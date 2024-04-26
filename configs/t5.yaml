@@ -10,10 +10,8 @@ training:
   learning_rate: 0.00002
   per_device_train_batch_size: 4
   per_device_eval_batch_size: 4
-  num_train_epochs: 4
+  num_train_epochs: 10
   fp16: True
 
 agent:
   max_summary_length: 300
-  min_summary_length: 50
-  max_article_length: 512
