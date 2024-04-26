@@ -46,7 +46,7 @@ class WikipediaDataset:
         datadict: DatasetDict = DatasetDict({'train': train_dataset, 'val': val_dataset})
 
         return datadict.map(
-            function=lambda batch: self.__batch_preprocess(tokenizer, batch), 
+            function=lambda batch: self.__batch_preprocess_training(tokenizer, batch), 
             batched=True, 
             batch_size=1024,
             num_proc=4,
@@ -56,19 +56,19 @@ class WikipediaDataset:
         # get the raw dataset
         dataset: Dataset = self.get_raw_dataset(None)
         return DatasetDict({'all': dataset}).map(
-            function=WikipediaDataset.__batch_truncate,
+            function=WikipediaDataset.__batch_preprocess_inference,
             batched=True,
             batch_size=1024,
             num_proc=4,
         )
 
     @staticmethod
-    def __batch_truncate(batch: Dataset) -> Dataset:
+    def __batch_preprocess_inference(batch: Dataset) -> Dataset:
         batch['text'] = [WikipediaDataset.__preprocess(doc) for doc in batch['text']]
         return batch
 
     @staticmethod
-    def __batch_preprocess(tokenizer: T5Tokenizer, batch: Dataset) -> Dataset:
+    def __batch_preprocess_training(tokenizer: T5Tokenizer, batch: Dataset) -> Dataset:
         batch['text'] = [
             'summarize: ' + text.replace(summary, '') if len(text) >= 3000 else text
             for text, summary in zip(batch['text'], batch['summary'])
