@@ -5,22 +5,37 @@ import pandas as pd
 from datasets import Dataset, DatasetDict
 from transformers import T5Tokenizer, BatchEncoding
 
+from google.cloud import bigquery
+
+
 class WikipediaDataset:
 
     def __init__(self, csv_path: str) -> None:
         self.csv_path: str = csv_path
+        self.bq_client = bigquery.Client()
     
     def get_raw_dataset(self, n_articles: Optional[int] = None) -> Dataset:
-        # read csv file
-        table: pd.DataFrame = pd.read_csv(
-            self.csv_path, 
-            names=['category', 'topic', 'summary', 'text', 'page_id', 'url'],
-            header=0,
-            dtype=str,
-            nrows=n_articles,
-        ).dropna(subset=['topic','summary','text'], how='any')
-        # convert `pd.DataFrame` to `datasets.Dataset`
-        return Dataset.from_pandas(df=table)
+        if n_articles is None:
+            limit_command: str = ''
+        else:
+            limit_command: str = f'LIMIT {int(n_articles)}'
+        query = (
+            f"""
+            SELECT 
+                `Category` AS `category`, 
+                `Topic` AS `topic`, 
+                `Summary` AS `summary`, 
+                `Full_Content` AS `text`, 
+                `Page_ID` AS `page_id`, 
+                `URL` AS `url`
+            FROM `analog-button-421413.WikiData.WikiData-Main`
+            WHERE TIMESTAMP_TRUNC(_PARTITIONTIME, DAY) = TIMESTAMP("2024-04-26")
+                AND `Topic` IS NOT NULL AND `Summary` IS NOT NULL AND `Full_Content` IS NOT NULL
+            {limit_command}
+            """
+        )
+        query_job = self.bq_client.query(query)  # make an API request.
+        return Dataset.from_pandas(df=query_job.to_dataframe())
 
     def for_training(
         self, 
@@ -104,7 +119,8 @@ class WikipediaDataset:
 if __name__ == '__main__':
     tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained('google-t5/t5-base', model_max_length=512)
     wiki = WikipediaDataset(csv_path='datasets/WikiData.csv')
-    training_dataset: DatasetDict = wiki.for_training(tokenizer, n_articles=1000)
-    inference_dataset: DatasetDict = wiki.for_inference()
+    dataset = wiki.get_raw_dataset()
+    # training_dataset: DatasetDict = wiki.for_training(tokenizer, n_articles=1000)
+    # inference_dataset: DatasetDict = wiki.for_inference()
 
 
