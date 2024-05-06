@@ -16,13 +16,12 @@ from .dataset import WikipediaDataset
 
 class Agent:
 
-    def __init__(self, config: str, csv_path: str, checkpoint: str) -> None:
+    def __init__(self, config: str, checkpoint: str) -> None:
         # Config
         with open(file=config, mode='r') as f:
             self.config: Dict[str, Any] = yaml.safe_load(f)
         # Data
-        self.csv_path: str = csv_path
-        self.wiki: WikipediaDataset = WikipediaDataset(csv_path=csv_path)
+        self.wiki: WikipediaDataset = WikipediaDataset()
         self.dataset: DatasetDict = self.wiki.for_inference()
         # Tokenizer & Model
         self.checkpoint: str = checkpoint

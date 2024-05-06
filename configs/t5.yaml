@@ -1,5 +1,4 @@
 dataset:
-  csv_path: 'datasets/WikiData.csv'
   n_articles: null  # parsed as None
   split: [0.9, 0.1]
 

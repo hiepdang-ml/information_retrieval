@@ -10,8 +10,7 @@ from google.cloud import bigquery
 
 class WikipediaDataset:
 
-    def __init__(self, csv_path: str) -> None:
-        self.csv_path: str = csv_path
+    def __init__(self) -> None:
         self.bq_client = bigquery.Client()
     
     def get_raw_dataset(self, n_articles: Optional[int] = None) -> Dataset:
@@ -118,7 +117,7 @@ class WikipediaDataset:
     
 if __name__ == '__main__':
     tokenizer: T5Tokenizer = T5Tokenizer.from_pretrained('google-t5/t5-base', model_max_length=512)
-    wiki = WikipediaDataset(csv_path='datasets/WikiData.csv')
+    wiki = WikipediaDataset()
     # dataset = wiki.get_raw_dataset()
     training_dataset: DatasetDict = wiki.for_training(tokenizer, n_articles=1000)
     inference_dataset: DatasetDict = wiki.for_inference()

@@ -15,5 +15,5 @@
 
 
 ## Launch the CLI
-```python launch.py --chechpoint dangvohiep/wikit5```
+```python launch.py --checkpoint dangvohiep/wikit5```
 

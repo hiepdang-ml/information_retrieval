@@ -32,7 +32,7 @@ def main(config: Dict[str, Any]) -> None:
         model: T5Base = T5Base(tokenizer=tokenizer)
         model.load_state_dict(torch.load('t5_state_dict.pth'))
 
-    wiki = WikipediaDataset(csv_path=config['dataset']['csv_path'])
+    wiki = WikipediaDataset()
     dataset = wiki.for_training(
         tokenizer=tokenizer, 
         split_ratios=tuple(config['dataset']['split']), 
@@ -76,7 +76,6 @@ if __name__ == '__main__':
 
     parser.add_argument('--from_checkpoint', type=str, help='Continue training from a checkpoint.')
     parser.add_argument('--config', type=str, default='t5.yaml', help='Configuration file name.')
-    parser.add_argument('--csv_path', type=str, help='Path to the dataset file')
     parser.add_argument('--n_articles', type=int, help='How many articles are used for both training and evaluation')
     parser.add_argument('--split', nargs=3, type=float, help='List of split ratios')
     parser.add_argument('--output_dir', type=str, help='Directory to save the model')
@@ -99,7 +98,7 @@ if __name__ == '__main__':
         value: str | int | float | None = getattr(args, arg)
         if value is None:
             continue
-        elif arg in ['csv_path', 'split', 'n_articles']:
+        elif arg in ['split', 'n_articles']:
             config['dataset'][arg] = value
         elif arg in [
             'from_checkpoint',
