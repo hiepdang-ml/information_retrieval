@@ -53,6 +53,9 @@ class Agent:
                 print('Please clarify your question')
                 continue
             
+            query: str = query.lower()
+            for prefix in ['explain', 'tell me about', 'talk about', 'what is']:
+                query: str = query.lstrip(prefix)
             urls, articles = self.rank_articles(query, n_articles=1)
             inputs: torch.Tensor = self.tokenizer(
                 '\n'.join(articles), 
